@@ -1,133 +1,131 @@
-# FastAPI Project Template
+# FastAPI Chat Completion Template
 
-A modern, production-ready template for building APIs with Python 3.8+ using FastAPI. This template provides a modular structure and includes a TODO list CRUD example to demonstrate best practices.
+A modern, modular FastAPI template for building chat completion APIs using LangChain and Anthropic's Claude.
 
 ## Features
 
-- 🚀 FastAPI for high-performance API development
-- 📁 Modular project structure
-- 🔍 Example TODO list CRUD implementation
-- 📝 Auto-generated API documentation (Swagger/OpenAPI)
-- ✨ Clean, maintainable architecture
-- 🔒 Type safety with Pydantic models
+- FastAPI-based REST API
+- LangChain integration with Anthropic's Claude
+- Modular service architecture
+- Async support
+- Conversation history management
+- Environment-based configuration
+- Type hints and validation
 
-## Quick Start
+## Prerequisites
 
-### Prerequisites
+- Python 3.8+
+- Anthropic API key
 
-- Python 3.8 or higher
-- pip (Python package installer)
+## Installation
 
-### Setup
+1. Clone the repository:
 
-1. Clone the template:
+```bash
+git clone https://github.com/yourusername/fastAPI-chat-completion-template.git
+cd fastAPI-chat-completion-template
+```
 
-   ```bash
-   git clone https://github.com/yourusername/fastapi-template.git
-   cd fastapi-template
-   ```
+2. Create and activate a virtual environment:
 
-2. Create and activate virtual environment:
-
-   ```bash
-   # Create virtual environment
-   python -m venv venv
-
-   # Windows
-   .\venv\Scripts\activate
-
-   # macOS/Linux
-   source venv/bin/activate
-   ```
+```bash
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+```
 
 3. Install dependencies:
 
-   ```bash
-   pip install -r requirements.txt
-   ```
+```bash
+pip install -r requirements.txt
+```
 
-4. Run the application:
+4. Set up environment variables:
 
-   ```bash
-   python main.py
-   ```
-
-5. Open http://localhost:8000/docs to view the API documentation
+```bash
+cp .env.EXAMPLE .env
+# Edit .env with your Anthropic API key
+```
 
 ## Project Structure
 
-fastapi-template/
-├── main.py # Application entry point
-├── requirements.txt # Project dependencies
-├── models/ # Data models
-│ └── todo.py # TODO models
-└── routes/ # API routes
-└── todo_routes.py # TODO endpoints
+```
+.
+├── api/
+│   └── routes/
+│       └── chat_routes.py    # API endpoints
+├── models/
+│   └── chat.py              # Pydantic models
+├── services/
+│   ├── base.py              # Base service class
+│   └── chat/
+│       ├── base.py          # Base chat service
+│       └── anthropic.py     # Anthropic implementation
+├── main.py                  # Application entry point
+├── requirements.txt         # Project dependencies
+└── .env                     # Environment variables
+```
+
+## Usage
+
+1. Start the server:
+
+```bash
+python -m uvicorn main:app --reload
+```
+
+2. Access the API documentation:
+
+- Swagger UI: http://localhost:8001/docs
+- ReDoc: http://localhost:8001/redoc
 
 ## API Endpoints
 
-The template includes a complete TODO list API:
+### Chat Completion
 
-- `GET /todos` - List all todos
-- `POST /todos` - Create a todo
-- `GET /todos/{id}` - Get a specific todo
-- `PUT /todos/{id}` - Update a todo
-- `DELETE /todos/{id}` - Delete a todo
+- `POST /api/chat/completions`
+  ```json
+  {
+    "message": {
+      "content": "Your message here",
+      "role": "user" // optional, defaults to "user"
+    }
+  }
+  ```
 
-## Contributing
+### Chat History
 
-We welcome contributions! Here's how to contribute to this project:
-
-### Making Changes
-
-1. Fork the repository
-2. Create a feature branch:
-   ```bash
-   git checkout -b feature/your-feature-name
-   ```
-3. Make your changes
-4. Test your changes
-5. Commit with clear messages:
-   ```bash
-   git commit -m "feat: add new feature"
-   ```
-
-### Submitting a Pull Request
-
-1. Push to your fork:
-   ```bash
-   git push origin feature/your-feature-name
-   ```
-2. Go to the original repository and create a Pull Request
-3. Fill in the PR template with:
-   - Description of changes
-   - Related issue(s)
-   - Testing performed
-   - Screenshots (if applicable)
-
-### Pull Request Guidelines
-
-- Follow existing code style
-- Add tests for new features
-- Update documentation
-- One feature per PR
-- Keep PRs focused and manageable in size
+- `GET /api/chat/history` - Get conversation history
+- `DELETE /api/chat/history` - Clear conversation history
 
 ## Development
 
-### Code Style
+### Adding New Chat Providers
 
-- Follow PEP 8 guidelines
-- Use type hints
-- Write docstrings for functions and classes
-- Keep functions focused and single-purpose
+1. Create a new service class in `services/chat/`
+2. Inherit from `BaseChatService`
+3. Implement the `get_chat_response` method
+4. Update the service factory in `api/routes/chat_routes.py`
+
+### Running Tests
+
+```bash
+pytest
+```
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request
 
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
-## Getting Help
+## Acknowledgments
 
-- Check the [FastAPI documentation](https://fastapi.tiangolo.com/)
-- Open an issue for bugs
-- Start a discussion for questions
+- FastAPI
+- LangChain
+- Anthropic
