@@ -8,7 +8,6 @@ class ChatMessage(BaseModel):
     role: str = "user"
     content: str
 
-
 class ChatRequest(BaseModel):
     model: str
     messages: List[ChatMessage]

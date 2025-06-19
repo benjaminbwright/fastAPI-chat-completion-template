@@ -2,6 +2,7 @@ import os
 from typing import List, Optional, Generator, AsyncGenerator
 from datetime import datetime
 from langchain_anthropic import ChatAnthropic
+from langchain_openai import ChatOpenAI
 from langchain_core.callbacks import BaseCallbackHandler
 from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 from app.models.chat import ChatChoice, ChatMessage, ChatResponse, ChatHistory, ChatStreamChunk, ChatStreamChoice, ChatDelta
@@ -19,23 +20,51 @@ class SSEStreamingCallback(BaseCallbackHandler):
 
 class ChatService:
     def __init__(self):
-        self.chat_model = ChatAnthropic(
-            anthropic_api_key=os.getenv("ANTHROPIC_API_KEY"),
-            model_name="claude-3-opus-20240229",
+        # self.chat_model = ChatAnthropic(
+        #     anthropic_api_key=os.getenv("ANTHROPIC_API_KEY"),
+        #     model_name="claude-3-opus-20240229",
+        #     max_tokens=1024,
+        #     streaming=True
+        # )
+        self.chat_model = ChatOpenAI(
+            model_name="gpt-4.1-nano",
             max_tokens=1024,
-            streaming=True
+            streaming=True,
+            openai_api_key=os.getenv("OPENAI_API_KEY")
         )
         self.conversation_history: List[ChatMessage] = []
         self.system_prompt = "You are a helpful AI assistant."
     def _get_llm(self, streaming: bool = False, callback: Optional[BaseCallbackHandler] = None):
-        self.chat_model = ChatAnthropic(
-            anthropic_api_key=os.getenv("ANTHROPIC_API_KEY"),
-            model_name="claude-3-opus-20240229",
-            max_tokens=1024,
-            callbacks=[callback] if callback else None,
-            streaming=streaming
-        )
-        return self.chat_model
+        """Get the language model with the appropriate configuration.
+        
+        Args:
+            streaming: Whether to enable streaming
+            callback: Optional callback handler for streaming
+            
+        Returns:
+            Configured language model
+        """
+        # For OpenAI models
+        if isinstance(self.chat_model, ChatOpenAI):
+            return ChatOpenAI(
+                model_name=self.chat_model.model_name,
+                max_tokens=1024,
+                streaming=streaming,
+                callbacks=[callback] if callback else None,
+                openai_api_key=os.getenv("OPENAI_API_KEY")
+            )
+        # For Anthropic models
+        elif isinstance(self.chat_model, ChatAnthropic):
+            return ChatAnthropic(
+                anthropic_api_key=os.getenv("ANTHROPIC_API_KEY"),
+                model_name=self.chat_model.model_name,
+                max_tokens=1024,
+                callbacks=[callback] if callback else None,
+                streaming=streaming
+            )
+        # Default case
+        else:
+            return self.chat_model
     
     async def generate_stream_response(self, message: str) -> AsyncGenerator[str, None]:
         """Generate a streaming response for the given message.
@@ -47,33 +76,37 @@ class ChatService:
             Server-sent event data in the format expected by Open WebUI
         """
         print("Generating stream response")
-        callback = SSEStreamingCallback()
-        llm = self._get_llm(streaming=True, callback=callback)
-
+        
         messages = [SystemMessage(content=self.system_prompt)]
         messages.append(HumanMessage(content=message))
 
         response_id = f"chatcmpl-{uuid.uuid4().hex}"
         created = int(time.time())
-
-        async for chunk in llm.astream(messages):
-            if chunk.content:
-                stream_chunk = ChatStreamChunk(
-                    id=response_id,
-                    created=created,
-                    model="praxis-1",
-                    choices=[
-                        ChatStreamChoice(
-                            delta=ChatDelta(
-                                role="assistant",
-                                content=chunk.content
-                            ),
-                            index=0
-                        )
-                    ]
-                )
-                yield f"data: {stream_chunk.json()}\n\n"
-
+        
+        # Configure model with streaming
+        streaming_llm = self._get_llm(streaming=True)
+        
+        try:
+            async for chunk in streaming_llm.astream(messages):
+                if hasattr(chunk, 'content') and chunk.content:
+                    stream_chunk = ChatStreamChunk(
+                        id=response_id,
+                        created=created,
+                        model="praxis-1",  # Use a consistent model name for frontend
+                        choices=[
+                            ChatStreamChoice(
+                                delta=ChatDelta(
+                                    role="assistant",
+                                    content=chunk.content
+                                ),
+                                index=0
+                            )
+                        ]
+                    )
+                    yield f"data: {stream_chunk.json()}\n\n"
+        except Exception as e:
+            print(f"Streaming error: {e}")
+        
         # Send the final message
         final_chunk = ChatStreamChunk(
             id=response_id,
